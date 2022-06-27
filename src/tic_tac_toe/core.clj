@@ -23,12 +23,19 @@
             [3 3])))
       [3 3])))
 
+(def animals
+  true)
+
 (defn display-board
   "Displays state of board."
   [board
    width]
   (let [board (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
-                      (str " " (str/upper-case (name %)))
+                      (if animals
+                        (if (= % :o)
+                          "🐈"
+                          "🐢")
+                        (str " " (name %)))
                       (if (< % 10)
                         (str " " %)
                         %))
@@ -41,12 +48,15 @@
   [board dimensions]
   (concat
    (partition-all (first dimensions) board)
-   (list
-    (loop
-     [board board]
-      (if (seq board)
-        (take-nth (last dimensions) board)
-        (recur (drop 1 board)))))))
+   (loop
+    [board board
+     columns '()]
+     (if
+      (and (seq board)
+           (= (count (take-nth (first dimensions) board)) (last dimensions)))
+       (recur (rest board)
+              (conj columns (take-nth (first dimensions) board)))
+       columns))))
 
 (defn player-match?
   "If a line contains the same player, return player, otherwise nil."
