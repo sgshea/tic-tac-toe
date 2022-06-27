@@ -35,18 +35,18 @@
                    board)]
     (println (str " " (str/join " " (flatten (interpose "\n" (partition-all width board))))))))
 
-;; Functionality for checking for a winner, probably only works for 3x3 board
-(defn create-matches
-  "Checks all of the board's lines to be checked for a winner. Takes a board as an argument."
-  [board width]
+; TODO: diagonals
+(defn create-matches-full
+  "Creates lines to be checked for matches, lines go fully across."
+  [board dimensions]
   (concat
-   (partition-all width board)                        ; partition board into rows
+   (partition-all (first dimensions) board)
    (list
-    (take-nth 3 board)                            ; first column
-    (take-nth 3 (drop 1 board))
-    (take-nth 3 (drop 2 board))
-    (take-nth 4 board)                            ; diagonal
-    (take-nth 2 (drop-last 2 (drop 2 board))))))  ; diagonal
+    (loop
+     [board board]
+      (if (seq board)
+        (take-nth (last dimensions) board)
+        (recur (drop 1 board)))))))
 
 (defn player-match?
   "If a line contains the same player, return player, otherwise nil."
@@ -59,9 +59,9 @@
 
 (defn winner?
   "Returns winning player if one exists, otherwise nil."
-  [board width]
+  [board dimensions]
   (first
-   (filter #{:x :o} (map player-match? (create-matches board width)))))
+   (filter #{:x :o} (map player-match? (create-matches-full board dimensions)))))
 
 (defn full-board?
   "Is every cell a :o or :x?"
@@ -102,10 +102,10 @@
   (loop [dimensions (define-dimensions)
          board (board-creator dimensions)
          player-turns player-turns]
-    (let [winner (winner? board (nth dimensions 0))]
-      (println dimensions)
+    (println dimensions)
+    (let [winner (winner? board dimensions)]
       (println "Current Board:")
-      (display-board board (nth dimensions 0))
+      (display-board board (first dimensions))
       (cond
         winner  (println "Player " (name winner) "wins!")
         (full-board? board) (println "The game is a draw.")
