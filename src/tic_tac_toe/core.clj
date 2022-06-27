@@ -14,18 +14,19 @@
   Defaults to [3 3] if any input besides the proper form with integers is given."
   []
   (println "Please enter dimensions of board in form 'i,j', otherwise board defaults to '3x3'.")
-  (let [line-input
-        (read-line)]
+  (let [line-input (read-line)]
     (if (str/includes? line-input ",")
       (let [input (str/split line-input #",")]
-        (if (and (int? (nth input 0)) (int? (nth input 1)) (<= (count input) 2))
+        (try
           [(. Integer parseInt (nth input 0)) (. Integer parseInt (nth input 1))]
-          [3 3]))
+          (catch Exception e
+            [3 3])))
       [3 3])))
 
 (defn display-board
   "Displays state of board."
-  [board width]
+  [board
+   width]
   (let [board (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
                       (str " " (str/upper-case (name %)))
                       (if (< % 10)
@@ -48,11 +49,11 @@
     (take-nth 2 (drop-last 2 (drop 2 board))))))  ; diagonal
 
 (defn player-match?
-  "If line contains triple with same player, return player, otherwise nil."
-  [triple]
-  (if (every? #{:x} triple)
+  "If a line contains the same player, return player, otherwise nil."
+  [line]
+  (if (every? #{:x} line)
     :x
-    (if (every? #{:o} triple)
+    (if (every? #{:o} line)
       :o
       nil)))
 
@@ -102,11 +103,12 @@
          board (board-creator dimensions)
          player-turns player-turns]
     (let [winner (winner? board (nth dimensions 0))]
+      (println dimensions)
       (println "Current Board:")
       (display-board board (nth dimensions 0))
       (cond
         winner  (println "Player " (name winner) "wins!")
-        (full-board? board)   (println "The game is a draw.")
+        (full-board? board) (println "The game is a draw.")
         :else
         (recur
          dimensions
@@ -114,5 +116,3 @@
          (rest player-turns))))))
 
 (game-loop player-turns)
-
-
