@@ -42,13 +42,12 @@
                    board)]
     (println (str " " (str/join " " (flatten (interpose "\n" (partition-all width board))))))))
 
-; TODO: diagonals
 (defn create-matches-full
   "Creates lines to be checked for matches, lines go fully across."
   [board dimensions]
   (concat
-   (partition-all (first dimensions) board)
-   (loop
+   (partition-all (first dimensions) board)                                     ; rows
+   (loop                                                                        ; columns
     [board board
      columns '()]
      (if
@@ -56,7 +55,27 @@
            (= (count (take-nth (first dimensions) board)) (last dimensions)))
        (recur (rest board)
               (conj columns (take-nth (first dimensions) board)))
-       columns))))
+       columns)))
+  (when (= (first dimensions) (last dimensions))                               ; diagonals
+    (list
+     (loop [left-diagonal '()                                                   ; diagonal starting from top left
+            increment 0]                                                        ; remember indexes start from 0
+       (if (< increment (last dimensions))
+         (recur
+          (conj left-diagonal
+                (nth board
+                     (+ increment (* increment (first dimensions)))))
+          (inc increment))
+         left-diagonal))
+     (loop [right-diagonal '()                                                  ; diagonal starting from bottom left to top right
+            decrement (last dimensions)]
+       (if (> decrement 0)
+         (recur
+          (conj right-diagonal
+                (nth board
+                     (- (* decrement (first dimensions)) decrement)))
+          (dec decrement))
+         right-diagonal)))))
 
 (defn player-match?
   "If a line contains the same player, return player, otherwise nil."
@@ -97,8 +116,8 @@
 
 (defn take-turn
   "Tell players to make a move and handle incorrect moves."
-  [player board]
-  (println (str (name player) "'s turn, Select your move (enter number 1 through 9)"))
+  [player board dimensions]
+  (println (str (name player) "'s turn, Select your move (enter number 1 through " (* (first dimensions) (last dimensions)) ")"))
   (loop [move (next-placement board)]
     (if move
       (assoc board (dec move) player)
@@ -122,7 +141,7 @@
         :else
         (recur
          dimensions
-         (take-turn (first player-turns) board)
+         (take-turn (first player-turns) board dimensions)
          (rest player-turns))))))
 
 (game-loop player-turns)
