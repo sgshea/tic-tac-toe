@@ -8,26 +8,37 @@
   "Gets and returns the display for a single cell.
   To be displayed in the gui.
   Location is position of cell wanted."
-  [board dimensions location]
-  (let [board (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
-                      (str " " (name %))
-                      (if (< % 10)
-                        (str " " %)
-                        %))
-                   board)]
-    (let [board (partition-all (first dimensions) board)]
-      ((nth (nth board (first location)) (last location))))))
+  [board width location]
+  {:fx/type :label
+   :grid-pane/hgrow :always
+   :grid-pane/vgrow :always
+   :grid-pane/row (inc (first location))
+   :grid-pane/column (inc (last location))
+   :text (nth board (+ (last location) (* (first location) width)))})
 
 (defn display-board-as-grid
   "Displays the board as a grid."
   [{:keys [board dimensions]}]
-  (concat
-   (for [i (range (last dimensions))]
-     (for [j (range (first dimensions))]
-       {:fx/type :label
-        :grid-pane/column j
-        :grid-pane/row i
-        :text (grid-cell board dimensions [i j])}))))
+  (let [board
+        (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
+                (str " " (name %))
+                (if (< % 10)
+                  (str " " %)
+                  %))
+             board)]
+    (loop
+     [grid '()
+      row 0
+      column 0]
+      (if (< row (last dimensions))
+        (recur (conj grid (grid-cell board (last dimensions) [row column]))
+               (if (< column (dec (first dimensions)))
+                 row
+                 (inc row))
+               (if (< column (dec (first dimensions)))
+                 (inc column)
+                 0))
+        grid))))
 
 (defn display-information
   "A place to display information such as who's turn it is."
@@ -42,14 +53,9 @@
 (defn grid-pane
   [{:keys [board dimensions]}]
   {:fx/type :grid-pane
-   :children (concat
-              (for [i (range 16)]
-                {:fx/type :label
-                 :grid-pane/column i
-                 :grid-pane/row i
-                 :grid-pane/hgrow :always
-                 :grid-pane/vgrow :always
-                 :text "boop"}))})
+   :children
+   (display-board-as-grid {:board board
+                           :dimensions dimensions})})
 
 ;; Splits scene into grid-pane and a place for other text
 (defn split-pane
