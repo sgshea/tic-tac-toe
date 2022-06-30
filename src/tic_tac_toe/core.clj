@@ -1,147 +1,111 @@
 (ns tic-tac-toe.core
   (:gen-class)
-  (:require
-   [clojure.string :as str]))
+  (:require [cljfx.api :as fx]
+            [tic-tac-toe.logic :as logic])
+  (:import [javafx.application Platform]))
 
-(defn board-creator
-  "Creates a board using given dimensions. The board is a single dimension vector."
-  [dimensions]
-  (vec
-   (range 1 (inc (* (first dimensions) (last dimensions))))))
-
-(defn define-dimensions
-  "Asks user for dimensions of a board, and places them in a vector.
-  Defaults to [3 3] if any input besides the proper form with integers is given."
-  []
-  (println "Please enter dimensions of board in form 'i,j', otherwise board defaults to '3x3'.")
-  (let [line-input (read-line)]
-    (if (str/includes? line-input ",")
-      (let [input (str/split line-input #",")]
-        (try
-          [(. Integer parseInt (nth input 0)) (. Integer parseInt (nth input 1))]
-          (catch Exception e
-            [3 3])))
-      [3 3])))
-
-(def animals
-  true)
-
-(defn display-board
-  "Displays state of board."
-  [board
-   width]
+(defn grid-cell
+  "Gets and returns the display for a single cell.
+  To be displayed in the gui.
+  Location is position of cell wanted."
+  [board dimensions location]
   (let [board (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
-                      (if animals
-                        (if (= % :o)
-                          "🐈"
-                          "🐢")
-                        (str " " (name %)))
+                      (str " " (name %))
                       (if (< % 10)
                         (str " " %)
                         %))
                    board)]
-    (println (str " " (str/join " " (flatten (interpose "\n" (partition-all width board))))))))
+    (let [board (partition-all (first dimensions) board)]
+      ((nth (nth board (first location)) (last location))))))
 
-(defn create-matches-full
-  "Creates lines to be checked for matches, lines go fully across."
-  [board dimensions]
+(defn display-board-as-grid
+  "Displays the board as a grid."
+  [{:keys [board dimensions]}]
   (concat
-   (partition-all (first dimensions) board)                                     ; rows
-   (loop                                                                        ; columns
-    [board board
-     columns '()]
-     (if
-      (and (seq board)
-           (= (count (take-nth (first dimensions) board)) (last dimensions)))
-       (recur (rest board)
-              (conj columns (take-nth (first dimensions) board)))
-       columns)))
-  (when (= (first dimensions) (last dimensions))                               ; diagonals
-    (list
-     (loop [left-diagonal '()                                                   ; diagonal starting from top left
-            increment 0]                                                        ; remember indexes start from 0
-       (if (< increment (last dimensions))
-         (recur
-          (conj left-diagonal
-                (nth board
-                     (+ increment (* increment (first dimensions)))))
-          (inc increment))
-         left-diagonal))
-     (loop [right-diagonal '()                                                  ; diagonal starting from bottom left to top right
-            decrement (last dimensions)]
-       (if (> decrement 0)
-         (recur
-          (conj right-diagonal
-                (nth board
-                     (- (* decrement (first dimensions)) decrement)))
-          (dec decrement))
-         right-diagonal)))))
+   (for [i (range (last dimensions))]
+     (for [j (range (first dimensions))]
+       {:fx/type :label
+        :grid-pane/column j
+        :grid-pane/row i
+        :text (grid-cell board dimensions [i j])}))))
 
-(defn player-match?
-  "If a line contains the same player, return player, otherwise nil."
-  [line]
-  (if (every? #{:x} line)
-    :x
-    (if (every? #{:o} line)
-      :o
-      nil)))
+(defn display-information
+  "A place to display information such as who's turn it is."
+  [{:keys [information]}]
+  {:fx/type :h-box
+   :alignment :center
+   :spacing 20
+   :children [{:fx/type :label
+               :text (str information)}]})
 
-(defn winner?
-  "Returns winning player if one exists, otherwise nil."
-  [board dimensions]
-  (first
-   (filter #{:x :o} (map player-match? (create-matches-full board dimensions)))))
+;; Grid for tic-tac-toe board
+(defn grid-pane
+  [{:keys [board dimensions]}]
+  {:fx/type :grid-pane
+   :children (concat
+              (for [i (range 16)]
+                {:fx/type :label
+                 :grid-pane/column i
+                 :grid-pane/row i
+                 :grid-pane/hgrow :always
+                 :grid-pane/vgrow :always
+                 :text "boop"}))})
 
-(defn full-board?
-  "Is every cell a :o or :x?"
+;; Splits scene into grid-pane and a place for other text
+(defn split-pane
+  [{:keys [board dimensions]}]
+  {:fx/type :split-pane
+   :divider-positions [0.5]
+   :items [{:fx/type :v-box
+            :split-pane/resizable-with-parent false
+            :children [{:fx/type :label
+                        :padding 50
+                        :text "Tic-Tac-Toe"}
+                       {:fx/type display-information
+                        :padding 50
+                        :information "test information!"}]}
+           {:fx/type grid-pane
+            :board board
+            :dimensions dimensions}]})
+
+(defn root
+  [{:keys [board dimensions]}]
+  {:fx/type :stage
+   :showing true
+   :title "Tic-Tac-toe"
+   :scene {:fx/type :scene
+           :root {:fx/type split-pane
+                  :pref-width 960
+                  :pref-height 540
+                  :board board
+                  :dimensions dimensions}}})
+
+;; Board is stored in an atom
+;; Inital state is with default board of 3x3
+(def *state
+  (atom {:board [1 2 3 4 5 6 7 8 9]
+         :dimensions [3 3]}))
+
+(defn set-board
+  "Updates board."
   [board]
-  (every? #{:x :o} board))
+  (swap! *state assoc :board board))
 
-;; Game sequence
-(def player-turns
-  "Alternates between players."
-  (cycle [:o :x]))
+(defn set-dimensions
+  "Updates dimensions and the board with given dimensions."
+  [dimensions]
+  (swap! *state assoc :dimensions dimensions
+         :board (logic/board-creator dimensions)))
 
-(defn next-placement
-  "Reads next placement from command line and converts to integer.
-  Returns move if value is existing, otherwise nil."
-  [board]
-  (let [keyboard-input
-        (try
-          (. Integer parseInt (read-line))
-          (catch Exception e nil))]
-    (if (some #{keyboard-input} board)
-      keyboard-input
-      nil)))
+(def renderer
+  (fx/create-renderer
+   :middleware (fx/wrap-map-desc assoc :fx/type root)))
 
-(defn take-turn
-  "Tell players to make a move and handle incorrect moves."
-  [player board dimensions]
-  (println (str (name player) "'s turn, Select your move (enter number 1 through " (* (first dimensions) (last dimensions)) ")"))
-  (loop [move (next-placement board)]
-    (if move
-      (assoc board (dec move) player)
-      (do
-        (println (str (name player) ":") "The move entered is invalid, enter another move.")
-        (recur (next-placement board))))))
+(defn -main
+  [& args]
+  (Platform/setImplicitExit true)
+  (fx/mount-renderer *state renderer))
 
-(defn game-loop
-  "Iterates through player turns until winner or board is full."
-  [player-turns]
-  (loop [dimensions (define-dimensions)
-         board (board-creator dimensions)
-         player-turns player-turns]
-    (println dimensions)
-    (let [winner (winner? board dimensions)]
-      (println "Current Board:")
-      (display-board board (first dimensions))
-      (cond
-        winner  (println "Player " (name winner) "wins!")
-        (full-board? board) (println "The game is a draw.")
-        :else
-        (recur
-         dimensions
-         (take-turn (first player-turns) board dimensions)
-         (rest player-turns))))))
-
-(game-loop player-turns)
+;; TODO
+;; Probably need to reimplement most of the cli functionality to use javafx text boxes for input etc.
+;; store the board in the atom and update on clicks? then display next turn
