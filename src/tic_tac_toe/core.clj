@@ -69,6 +69,20 @@
 ;; 2. Way to change board size
 ;; 3. Button to start new game
 
+(defn information
+  "Checks for winners, if board is full, or else displays current turn. Also displays current dimensions."
+  [{:keys [board dimensions player]}]
+  {:fx/type :v-box
+   :alignment :center
+   :spacing 3
+   :children [{:fx/type :label
+               :text (let [winner (logic/winner? board dimensions)]
+                       (cond
+                         winner (str "Player " (name winner) " wins!")
+                         (logic/full-board? board) (str "The game is a draw.")
+                         :else
+                         (str (name player) "'s turn.")))}]})
+
 (def min-dimension
   3)
 (def max-dimension
@@ -113,13 +127,15 @@
    :on-action (fn [_] (set-dimensions temp-dimensions))})
 
 (defn display-information
-  "A place to display information such as who's turn it is."
-  [{:keys [temp-dimensions information]}]
+  "Left of split pane with controls and information display."
+  [{:keys [board dimensions temp-dimensions]}]
   {:fx/type   :v-box
    :alignment :center
    :spacing   20
-   :children  [{:fx/type :label
-                :text    (str information)}
+   :children  [{:fx/type information
+                :board board
+                :dimensions dimensions
+                :player (first (@*state :player-turns))}
                {:fx/type         dimension-input
                 :temp-dimensions temp-dimensions}
                {:fx/type         new-game-button
@@ -145,7 +161,8 @@
                         :text "Tic-Tac-Toe"}
                        {:fx/type display-information
                         :padding 50
-                        :information (str "Current Dimensions: " (str dimensions))
+                        :board board
+                        :dimensions dimensions
                         :temp-dimensions temp-dimensions}]}
            {:fx/type grid-pane
             :board board
