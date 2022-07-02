@@ -1,33 +1,16 @@
 # tic-tac-toe
 
-FIXME: description
+- Project to learn Clojure, a functional Lisp on the JVM.
+  - https://clojure.org/
+- GUI made with cljfx, a JavaFX wrapper.
+  - https://github.com/cljfx/cljfx
 
 ## Installation
 
-Download from http://example.com/FIXME.
-
-## Usage
-
-FIXME: explanation
-
-    $ java -jar tic-tac-toe-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
-
+## Images
+![](doc/images/1.0-Blank_Board.png)
+![](doc/images/1.0-Win.png)
+![](doc/images/1.0-Large_Board.png)
 ## License
 
 Copyright © 2022 FIXME
