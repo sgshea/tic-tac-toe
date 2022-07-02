@@ -1,15 +1,17 @@
 (ns tic-tac-toe.core
   (:gen-class)
   (:require [cljfx.api :as fx]
-            [tic-tac-toe.logic :as logic])
+            [tic-tac-toe.logic :as logic]
+            [clojure.string :as str])
   (:import [javafx.application Platform]))
 
 ;; Board is stored in an atom
 ;; Inital state is with default board of 3x3
 (def *state
-  (atom {:board [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]
-         :dimensions [4 4]
-         :temp-dimensions [3 3]}))
+  (atom {:board [1 2 3 4 5 6 7 8 9]
+         :dimensions [3 3]
+         :temp-dimensions [3 3]
+         :player-turns logic/player-turns}))
 
 (defn set-dimensions
   "Updates dimensions and board with new dimensions."
@@ -17,28 +19,37 @@
   (swap! *state assoc :dimensions new-dimensions)
   (swap! *state assoc :board (logic/board-creator new-dimensions)))
 
+(defn board-placement
+  "Places next player onto board with given location."
+  [board cell-data]
+  (if (keyword? cell-data)
+    nil
+    (do
+      (swap! *state assoc :board (assoc board (dec cell-data) (first (@*state :player-turns))))
+      (swap! *state assoc :player-turns (rest (@*state :player-turns))))))
+
 (defn grid-cell
   "Gets and returns the display for a single cell.
   To be displayed in the gui.
   Location is position of cell wanted."
   [board location]
-  {:fx/type :button
-   :grid-pane/hgrow :always
-   :grid-pane/vgrow :always
-   :grid-pane/row (first location)
-   :grid-pane/column (last location)
-   :text (str (nth (nth board (dec (first location))) (dec (last location))))})
+  (let [cell-data ; what is located in the cell
+        (nth (nth board (dec (first location))) (dec (last location)))]
+    {:fx/type          :button
+     :grid-pane/hgrow  :always
+     :grid-pane/vgrow  :always
+     :grid-pane/row    (first location)
+     :grid-pane/column (last location)
+     :on-action        (fn [_] (board-placement (vec (flatten board)) cell-data))
+     :text (if (keyword? cell-data)
+             (str (name cell-data))
+             (str cell-data))}))
 
 (defn display-board-as-grid
   "Displays the board as a grid."
   [{:keys [board dimensions]}]
   (let [board
-        (partition-all (first dimensions) (map #(if (keyword? %) ; transform keywords (:o or :x) to o and x
-                (str " " (name %))
-                (if (< % 10)
-                  (str " " %)
-                  %))
-             board))]
+        (partition-all (first dimensions) board)]
     (loop
      [grid '()
       row 1
