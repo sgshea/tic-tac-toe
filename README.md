@@ -6,6 +6,7 @@
   - https://github.com/cljfx/cljfx
 
 ## Installation
+- Download a Jar file from releases page.
 
 ## Images
 ![](doc/images/1.0-Blank_Board.png)
@@ -13,7 +14,7 @@
 ![](doc/images/1.0-Large_Board.png)
 ## License
 
-Copyright © 2022 FIXME
+Copyright © 2022 Sammy Shea
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at

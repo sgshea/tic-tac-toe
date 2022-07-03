@@ -1,8 +1,7 @@
 (ns tic-tac-toe.core
   (:gen-class)
   (:require [cljfx.api :as fx]
-            [tic-tac-toe.logic :as logic]
-            [clojure.string :as str])
+            [tic-tac-toe.logic :as logic])
   (:import [javafx.application Platform]))
 
 ; Global state
